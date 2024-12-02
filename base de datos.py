@@ -193,15 +193,12 @@ class Aeronave:
     
     def aterrizar(self):
         if self.ubicacion is Vuelo:
-            if len(self.aeropuerto_destino.pista) < self.aeropuerto_destino.capacidad_pista:
-                self.ubicacion = Pista(self.aeropuerto_destino)
-                self.aeropuerto = self.aeropuerto_destino
-                self.aeropuerto.pista.append(self) 
-                print(f"{self.nombre} ha aterrizado en {self.aeropuerto.codigo}")
-                if self.plan_vuelo.__contains__(self.aeropuerto_destino):
-                    self.plan_vuelo.remove(self.aeropuerto_destino) #removimos del plan de vuelo el aeropuerto en el que estamos
-            else:
-                print(f"La pista en {self.aeropuerto_destino.codigo} está llena, no puede aterrizar.")
+            self.ubicacion = Pista(self.aeropuerto_destino)
+            self.aeropuerto = self.aeropuerto_destino
+            self.aeropuerto.pista.append(self) 
+            print(f"{self.nombre} ha aterrizado en {self.aeropuerto.codigo}")
+            if self.plan_vuelo.__contains__(self.aeropuerto_destino):
+                self.plan_vuelo.remove(self.aeropuerto_destino) #removimos del plan de vuelo el aeropuerto en el que estamos
                 
             if len(self.plan_vuelo) <= 0:
                 self.ubicacion = Terminal(self.aeropuerto_destino)
@@ -214,10 +211,15 @@ class Aeronave:
             print(f"{self.nombre} no está en vuelo, no puede aterrizar.")
     
     def vuelo(self):
-        while len(self.plan_vuelo) > 0 or self.aeropuerto_destino.espacio_disponible() > 0:
-            self.desplazarse_a_pista()
-            self.despegar()
-            self.aterrizar()
+        while len(self.plan_vuelo) > 0:
+            if self.aeropuerto_destino.espacio_disponible() > 0:
+                if not isinstance(self.ubicacion, Pista):
+                    self.desplazarse_a_pista()
+                self.despegar()
+                self.aterrizar()
+            else:
+                print(f"La pista del aeropuerto {self.aeropuerto.codigo} está llena. La aeronave {self.nombre} no puede aterrizar.")
+                break
         
     def obtener_estado(self):
         return {
@@ -246,7 +248,7 @@ control.agregar_aeropuerto(aeropuerto5)
 #creando aeronaves
 aeronave1 = Aeronave("Aeronave1", aeropuerto1)
 aeronave2 = Aeronave("Aeronave2", aeropuerto2)
-aeronave3 = Aeronave("Aeronave3", aeropuerto3)
+aeronave3 = Aeronave("Aeronave3", aeropuerto2)
 
 #agregando aeronaves a control
 control.agregar_aeronave(aeronave1)
@@ -255,13 +257,12 @@ control.agregar_aeronave(aeronave2)
 
 #dandoles plan de vuelo
 aeronave1.configurar_plan_vuelo(ruta = [aeropuerto2, aeropuerto3, aeropuerto4, aeropuerto5])
-aeronave2.configurar_plan_vuelo(ruta = [aeropuerto2, aeropuerto4, aeropuerto5])
+aeronave2.configurar_plan_vuelo(ruta = [aeropuerto2, aeropuerto4])
 
 aeronave2.desplazarse_a_pista()
 aeronave3.desplazarse_a_pista()
 
 aeronave1.vuelo()
-aeronave2.vuelo()
 
 #chequeo base de datos
 conn = sqlite3.connect('control_transito_aereo.db')
