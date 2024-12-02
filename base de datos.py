@@ -6,7 +6,7 @@ def crear_base_de_datos():
     cursor = conn.cursor()
 
     cursor.execute('''
-        DROP TABLE Aeropuertos,
+        DROP TABLE Aeropuertos;
         CREATE TABLE IF NOT EXISTS Aeropuertos (
             aeropuerto_id INTEGER PRIMARY KEY AUTOINCREMENT,
             codigo TEXT NOT NULL,
@@ -15,7 +15,7 @@ def crear_base_de_datos():
     ''')
 
     cursor.execute('''
-        DROP TABLE Aeronaves,
+        DROP TABLE Aeronaves;
         CREATE TABLE IF NOT EXISTS Aeronaves (
             aeronave_id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL
@@ -23,7 +23,7 @@ def crear_base_de_datos():
     ''')
 
     cursor.execute('''
-        DROP TABLE Planes_de_vuelo,
+        DROP TABLE Planes_de_vuelo;
         CREATE TABLE IF NOT EXISTS Planes_de_vuelo (
             plan_de_vuelo_id INTEGER PRIMARY KEY AUTOINCREMENT,
             aeronave_nombre TEXT NOT NULL,
