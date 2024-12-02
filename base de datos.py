@@ -6,30 +6,30 @@ def crear_base_de_datos():
     cursor = conn.cursor()
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS aeropuertos (
-            codigo TEXT PRIMARY KEY,
-            capacidad_pista INTEGER
-        )
+        DROP TABLE Aeropuertos,
+        CREATE TABLE IF NOT EXISTS Aeropuertos (
+            aeropuerto_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            codigo TEXT NOT NULL,
+            capacidad INTEGER NOT NULL
+        );
     ''')
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS aeronaves (
-            nombre TEXT PRIMARY KEY,
-            aeropuerto_codigo TEXT,
-            ubicacion TEXT,
-            plan_vuelo TEXT,
-            FOREIGN KEY (aeropuerto_codigo) REFERENCES aeropuertos(codigo)
-        )
+        DROP TABLE Aeronaves,
+        CREATE TABLE IF NOT EXISTS Aeronaves (
+            aeronave_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nombre TEXT NOT NULL
+        );
     ''')
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS planes_vuelo (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            aeronave_nombre TEXT,
-            aeropuerto_destino_codigo TEXT,
-            FOREIGN KEY (aeronave_nombre) REFERENCES aeronaves(nombre),
-            FOREIGN KEY (aeropuerto_destino_codigo) REFERENCES aeropuertos(codigo)
-        )
+        DROP TABLE Planes_de_vuelo,
+        CREATE TABLE IF NOT EXISTS Planes_de_vuelo (
+            plan_de_vuelo_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            aeronave_nombre TEXT NOT NULL,
+            ruta TEXT NOT NULL,
+            FOREIGN KEY (aeronave_nombre) REFERENCES Aeronaves(nombre)
+        );
     ''')
 
     conn.commit()
@@ -40,20 +40,12 @@ class Ubicacion(ABC):
     def descripcion(self):
         pass
 
-    @abstractmethod
-    def permitir_operacion(self, aeronave):
-        pass
-
 class Terminal(Ubicacion):
     def __init__(self, aeropuerto):
         self.aeropuerto = aeropuerto
 
     def descripcion(self):
         return f"Terminal en el aeropuerto {self.aeropuerto.codigo}"
-
-    def permitir_operacion(self, aeronave):
-        if aeronave not in self.aeropuerto.terminal:
-            self.aeropuerto.terminal.append(aeronave)
 
 class Pista(Ubicacion):
     def __init__(self, aeropuerto):
@@ -62,21 +54,9 @@ class Pista(Ubicacion):
     def descripcion(self):
         return f"Pista en el aeropuerto {self.aeropuerto.codigo}"
 
-    def permitir_operacion(self, aeronave):
-        if aeronave not in self.aeropuerto.pista:
-            self.aeropuerto.pista.append(aeronave)
-
 class Vuelo(Ubicacion):
-    def __init__(self, aeropuerto_origen, aeropuerto_destino):
-        self.aeropuerto_origen = aeropuerto_origen
-        self.aeropuerto_destino = aeropuerto_destino
-
-    def descripcion(self):
-        return f"En vuelo desde {self.aeropuerto_origen.codigo} hacia {self.aeropuerto_destino.codigo}"
-
-    def permitir_operacion(self, aeronave):
-        if aeronave not in self.aeropuerto_origen.pista:
-            self.aeropuerto_origen.pista.append(aeronave)
+    def __init__(self):
+        pass
 
 class Aeropuerto:
     def __init__(self, codigo, capacidad_pista):
@@ -87,68 +67,60 @@ class Aeropuerto:
     
     def espacio_disponible(self):
         return self.capacidad_pista - len(self.pista)
-    
-    def obtener_estado(self):
-        return {
-            "terminal": [aeronave.nombre for aeronave in self.terminal],
-            "pista": [aeronave.nombre for aeronave in self.pista],
-            "capacidad_disponible": self.capacidad_pista - len(self.pista)
-        }
 
 class Control:
     def __init__(self):
         self.aeropuertos = []
         self.aeronaves = []
         self.planes_vuelo = []
+        self.aeronaves_en_alarma = []
 
     def agregar_aeropuerto(self, aeropuerto):
         self.aeropuertos.append(aeropuerto)
-        self.guardar_en_base_de_datos("aeropuertos", aeropuerto)
+        self.guardar_en_base_de_datos("Aeropuertos", aeropuerto)
 
     def agregar_aeronave(self, aeronave):
         self.aeronaves.append(aeronave)
-        self.guardar_en_base_de_datos("aeronaves", aeronave)
-
-    def guardar_en_base_de_datos(self, tipo, objeto):
+        self.guardar_en_base_de_datos("Aeronaves", aeronave)
+        
+    def agregar_plan(self, plan_vuelo):
+        self.planes_vuelo.append(plan_vuelo)
+        self.guardar_en_base_de_datos("Planes_de_vuelo", plan_vuelo)
+    
+    def guardar_en_base_de_datos(self, tabla, entidad):
         conn = sqlite3.connect('control_transito_aereo.db')
         cursor = conn.cursor()
         
-        if tipo == "aeropuertos":
+        if tabla == "Aeropuertos":
             cursor.execute('''
-            INSERT OR REPLACE INTO aeropuertos (codigo, capacidad_pista)
+            INSERT OR REPLACE INTO Aeropuertos (codigo, capacidad)
             VALUES (?, ?)
-            ''', (objeto.codigo, objeto.capacidad_pista))
-            print(f"Aeropuerto {objeto.codigo} guardado en la base de datos.")
+            ''', (entidad.codigo, entidad.capacidad_pista))
+            print(f"Aeropuerto {entidad.codigo} guardado en la base de datos.")
 
-        elif tipo == "aeronaves":
-            plan_vuelo_str = ','.join([aeropuerto.codigo for aeropuerto in objeto.plan_vuelo])
+        elif tabla == "Aeronaves":
             cursor.execute('''
-            INSERT OR REPLACE INTO aeronaves (nombre, aeropuerto_codigo, ubicacion, plan_vuelo)
-            VALUES (?, ?, ?, ?)
-            ''', (objeto.nombre, objeto.aeropuerto.codigo, objeto.ubicacion.descripcion(), plan_vuelo_str))
-            print(f"Aeronave {objeto.nombre} guardada en la base de datos.")
+            INSERT OR REPLACE INTO Aeronaves (nombre)
+            VALUES (?)
+            ''', (entidad.nombre))
+            print(f"Aeronave {entidad.nombre} guardada en la base de datos.")
 
-        elif tipo == "planes_vuelo":
-            for aeropuerto_destino in objeto.plan_vuelo:
-                cursor.execute('''
-                INSERT INTO planes_vuelo (aeronave_nombre, aeropuerto_destino_codigo)
+        elif tabla == "Planes_de_vuelo":
+            cursor.execute('''
+                INSERT INTO planes_vuelo (aeronave_id, ruta)
                 VALUES (?, ?)
-                ''', (objeto.nombre, aeropuerto_destino.codigo))
-                print(f"Plan de vuelo para {objeto.nombre} guardado en la base de datos.")
+                ''', (entidad.nombre, entidad.plan_vuelo))
+            print(f"Plan de vuelo para {entidad.nombre} guardado en la base de datos.")
 
         conn.commit()
         conn.close()
     
     def obtener_estado_espacio_aereo(self):
-        aeronaves_en_alarma = [
-            aeronave for aeronave in self.aeronaves
-            if isinstance(aeronave.ubicacion, Vuelo) and
-            len(aeronave.aeropuerto.pista) >= aeronave.aeropuerto.capacidad_pista
-        ]
-        return {
-            "aeronaves": [aeronave.nombre for aeronave in self.aeronaves],
-            "vuelos_en_alarma": [aeronave.nombre for aeronave in aeronaves_en_alarma]
-        }
+        for aeronave in self.aeronaves:
+            if aeronave.estado_alarma:
+                print(f"¡La aeronave {aeronave.nombre} está en alarma!")
+                self.aeronaves_en_alarma.append(aeronave)
+        return self.aeronaves_en_alarma
 
     def verificar_misma_ubicacion(self, aeronave1, aeronave2):
         return aeronave1.ubicacion == aeronave2.ubicacion
@@ -161,6 +133,7 @@ class Aeronave:
         self.plan_vuelo = []
         self.guardar_en_base_de_datos()
         self.aeropuerto_destino = None
+        self.estado_alarma = False
     
     def guardar_en_base_de_datos(self):
         print(f"La aeronave {self.nombre} ha sido guardada en la base de datos.")
@@ -199,7 +172,6 @@ class Aeronave:
             print(f"{self.nombre} ha aterrizado en {self.aeropuerto.codigo}")
             if self.plan_vuelo.__contains__(self.aeropuerto_destino):
                 self.plan_vuelo.remove(self.aeropuerto_destino) #removimos del plan de vuelo el aeropuerto en el que estamos
-                
             if len(self.plan_vuelo) <= 0:
                 self.ubicacion = Terminal(self.aeropuerto_destino)
                 print(f"{self.nombre} ha llegado a su destino. Plan de vuelo completado. Se queda en terminal")
@@ -218,7 +190,9 @@ class Aeronave:
                 self.despegar()
                 self.aterrizar()
             else:
-                print(f"La pista del aeropuerto {self.aeropuerto.codigo} está llena. La aeronave {self.nombre} no puede aterrizar.")
+                self.estado_alarma = True
+                print(f"La pista del aeropuerto {self.aeropuerto_destino.codigo} está llena. La aeronave {self.nombre} no puede aterrizar.")
+                control.obtener_estado_espacio_aereo()
                 break
         
     def obtener_estado(self):
@@ -257,12 +231,13 @@ control.agregar_aeronave(aeronave2)
 
 #dandoles plan de vuelo
 aeronave1.configurar_plan_vuelo(ruta = [aeropuerto2, aeropuerto3, aeropuerto4, aeropuerto5])
-aeronave2.configurar_plan_vuelo(ruta = [aeropuerto2, aeropuerto4])
+aeronave2.configurar_plan_vuelo(ruta = [aeropuerto3, aeropuerto4])
 
 aeronave2.desplazarse_a_pista()
 aeronave3.desplazarse_a_pista()
 
 aeronave1.vuelo()
+aeronave2.vuelo()
 
 #chequeo base de datos
 conn = sqlite3.connect('control_transito_aereo.db')
