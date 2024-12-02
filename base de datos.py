@@ -6,7 +6,6 @@ def crear_base_de_datos():
     cursor = conn.cursor()
 
     cursor.execute('''
-        DROP TABLE Aeropuertos;
         CREATE TABLE IF NOT EXISTS Aeropuertos (
             aeropuerto_id INTEGER PRIMARY KEY AUTOINCREMENT,
             codigo TEXT NOT NULL,
@@ -15,7 +14,6 @@ def crear_base_de_datos():
     ''')
 
     cursor.execute('''
-        DROP TABLE Aeronaves;
         CREATE TABLE IF NOT EXISTS Aeronaves (
             aeronave_id INTEGER PRIMARY KEY AUTOINCREMENT,
             nombre TEXT NOT NULL
@@ -23,7 +21,6 @@ def crear_base_de_datos():
     ''')
 
     cursor.execute('''
-        DROP TABLE Planes_de_vuelo;
         CREATE TABLE IF NOT EXISTS Planes_de_vuelo (
             plan_de_vuelo_id INTEGER PRIMARY KEY AUTOINCREMENT,
             aeronave_nombre TEXT NOT NULL,
@@ -82,15 +79,15 @@ class Control:
     def agregar_aeronave(self, aeronave):
         self.aeronaves.append(aeronave)
         self.guardar_en_base_de_datos("Aeronaves", aeronave)
-        
+
     def agregar_plan(self, plan_vuelo):
         self.planes_vuelo.append(plan_vuelo)
         self.guardar_en_base_de_datos("Planes_de_vuelo", plan_vuelo)
-    
+
     def guardar_en_base_de_datos(self, tabla, entidad):
         conn = sqlite3.connect('control_transito_aereo.db')
         cursor = conn.cursor()
-        
+
         if tabla == "Aeropuertos":
             cursor.execute('''
             INSERT OR REPLACE INTO Aeropuertos (codigo, capacidad)
@@ -114,7 +111,7 @@ class Control:
 
         conn.commit()
         conn.close()
-    
+
     def obtener_estado_espacio_aereo(self):
         for aeronave in self.aeronaves:
             if aeronave.estado_alarma:
@@ -142,6 +139,7 @@ class Aeronave:
         self.plan_vuelo = ruta
         for aeropuerto in ruta:
             print(f"El plan de vuelo de {self.nombre} ahora tiene como destino {aeropuerto.codigo}")
+        control.guardar_en_base_de_datos("Planes_de_vuelo", self)
         self.aeropuerto_destino = self.plan_vuelo[0]
 
     def desplazarse_a_terminal(self):
@@ -194,21 +192,13 @@ class Aeronave:
                 print(f"La pista del aeropuerto {self.aeropuerto_destino.codigo} está llena. La aeronave {self.nombre} no puede aterrizar.")
                 control.obtener_estado_espacio_aereo()
                 break
-        
-    def obtener_estado(self):
-        return {
-            "ubicacion": self.ubicacion,
-            "plan_vuelo": [aeropuerto.codigo for aeropuerto in self.plan_vuelo]
-        }
-
-crear_base_de_datos()
 
 #creando aeropuertos
-aeropuerto1 = Aeropuerto("A001", 2)
-aeropuerto2 = Aeropuerto("A002", 2)
-aeropuerto3 = Aeropuerto("A003", 2)
-aeropuerto4 = Aeropuerto("A004", 2)
-aeropuerto5 = Aeropuerto("A005", 2)
+aeropuerto1 = Aeropuerto("SAN", 2)
+aeropuerto2 = Aeropuerto("AMD", 2)
+aeropuerto3 = Aeropuerto("BAE", 2)
+aeropuerto4 = Aeropuerto("ORD", 2)
+aeropuerto5 = Aeropuerto("IAD", 2)
 
 control = Control()
 
@@ -220,9 +210,9 @@ control.agregar_aeropuerto(aeropuerto4)
 control.agregar_aeropuerto(aeropuerto5)
 
 #creando aeronaves
-aeronave1 = Aeronave("Aeronave1", aeropuerto1)
-aeronave2 = Aeronave("Aeronave2", aeropuerto2)
-aeronave3 = Aeronave("Aeronave3", aeropuerto2)
+aeronave1 = Aeronave("A101", aeropuerto1)
+aeronave2 = Aeronave("A102", aeropuerto2)
+aeronave3 = Aeronave("A102", aeropuerto2)
 
 #agregando aeronaves a control
 control.agregar_aeronave(aeronave1)
@@ -233,25 +223,25 @@ control.agregar_aeronave(aeronave2)
 aeronave1.configurar_plan_vuelo(ruta = [aeropuerto2, aeropuerto3, aeropuerto4, aeropuerto5])
 aeronave2.configurar_plan_vuelo(ruta = [aeropuerto3, aeropuerto4])
 
-aeronave2.desplazarse_a_pista()
-aeronave3.desplazarse_a_pista()
+#aeronave2.desplazarse_a_pista()
+#aeronave3.desplazarse_a_pista()
 
-aeronave1.vuelo()
-aeronave2.vuelo()
+#aeronave1.vuelo()
+#aeronave2.vuelo()
 
 #chequeo base de datos
 conn = sqlite3.connect('control_transito_aereo.db')
 cursor = conn.cursor()
 
-cursor.execute('SELECT * FROM aeropuertos')
+cursor.execute('SELECT * FROM Aeropuertos')
 aeropuertos = cursor.fetchall()
 print("Aeropuertos:", aeropuertos)
 
-cursor.execute('SELECT * FROM aeronaves')
+cursor.execute('SELECT * FROM Aeronaves')
 aeronaves = cursor.fetchall()
 print("Aeronaves:", aeronaves)
 
-cursor.execute('SELECT * FROM planes_vuelo')
+cursor.execute('SELECT * FROM Planes_de_vuelo')
 planes_vuelo = cursor.fetchall()
 print("Planes de vuelo:", planes_vuelo)
 
